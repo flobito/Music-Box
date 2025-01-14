@@ -1,0 +1,281 @@
+using System;
+using System.Collections.Generic;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
+
+public class Nodo
+{
+    public string Nota { get; set; }
+    public double Duracion { get; set; } // Duración en segundos
+    public Nodo Siguiente { get; set; }
+    public Nodo Anterior { get; set; }
+
+    public Nodo(string nota, double duracion)
+    {
+        Nota = nota;
+        Duracion = duracion;
+        Siguiente = null;
+        Anterior = null;
+    }
+}
+
+public class ListaDobleEnlazada
+{
+    private Nodo cabeza;
+    private Nodo cola;
+
+    public ListaDobleEnlazada()
+    {
+        cabeza = null;
+        cola = null;
+    }
+
+    public void Agregar(string nota, double duracion)
+    {
+        Nodo nuevoNodo = new Nodo(nota, duracion);
+        if (cabeza == null)
+        {
+            cabeza = nuevoNodo;
+            cola = nuevoNodo;
+        }
+        else
+        {
+            cola.Siguiente = nuevoNodo;
+            nuevoNodo.Anterior = cola;
+            cola = nuevoNodo;
+        }
+    }
+
+    public List<string> ObtenerNotas()
+    {
+        List<string> notas = new List<string>();
+        Nodo actual = cabeza;
+        while (actual != null)
+        {
+            notas.Add(actual.Nota);
+            actual = actual.Siguiente;
+        }
+        return notas;
+    }
+
+    public List<double> ObtenerDuraciones()
+    {
+        List<double> duraciones = new List<double>();
+        Nodo actual = cabeza;
+        while (actual != null)
+        {
+            duraciones.Add(actual.Duracion);
+            actual = actual.Siguiente;
+        }
+        return duraciones;
+    }
+
+    public List<string> ObtenerNotasInverso()
+    {
+        List<string> notas = new List<string>();
+        Nodo actual = cola;
+        while (actual != null)
+        {
+            notas.Add(actual.Nota);
+            actual = actual.Anterior;
+        }
+        return notas;
+    }
+
+    public List<double> ObtenerDuracionesInverso()
+    {
+        List<double> duraciones = new List<double>();
+        Nodo actual = cola;
+        while (actual != null)
+        {
+            duraciones.Add(actual.Duracion);
+            actual = actual.Anterior;
+        }
+        return duraciones;
+    }
+
+    public double ObtenerDuracionTotal()
+    {
+        double duracionTotal = 0;
+        Nodo actual = cabeza;
+        while (actual != null)
+        {
+            duracionTotal += actual.Duracion;
+            actual = actual.Siguiente;
+        }
+        return duracionTotal;
+    }
+}
+
+class Program
+{
+    // Frecuencias correspondientes a las notas musicales (piano)
+    private static readonly Dictionary<string, double> NotasFrecuencias = new Dictionary<string, double>
+    {
+        { "Do", 261.63 }, // C4
+        { "Re", 293.66 }, // D4
+        { "Mi", 329.63 }, // E4
+        { "Fa", 349.23 }, // F4
+        { "Sol", 392.00 }, // G4
+        { "La", 440.00 }, // A4
+        { "Si", 493.88 }, // B4
+    };
+
+    private static Dictionary<string, double> FigurasMusicales;
+
+    private static void AjustarFigurasMusicales(double nuevaDuracionNegra)
+    {
+        FigurasMusicales = new Dictionary<string, double>
+        {
+            { "redonda", nuevaDuracionNegra * 4 },
+            { "blanca", nuevaDuracionNegra * 2 },
+            { "negra", nuevaDuracionNegra },
+            { "corchea", nuevaDuracionNegra * 0.5 },
+            { "semicorchea", nuevaDuracionNegra * 0.25 }
+        };
+    }
+
+    private static void ReproducirNota(string nota, double duracion)
+    {
+        if (NotasFrecuencias.ContainsKey(nota))
+        {
+            var frecuencia = NotasFrecuencias[nota];
+
+            // Crear el generador de señal (onda sinusoidal)
+            var signalGenerator = new SignalGenerator()
+            {
+                Frequency = frecuencia, // Frecuencia correspondiente a la nota
+                Gain = 0.25, // Volumen de la onda
+                Type = SignalGeneratorType.Sin // Tipo de onda: Seno (sinusoidal)
+            };
+
+            // Configurar WaveOutEvent para reproducir la señal
+            using (var waveOut = new WaveOutEvent())
+            {
+                waveOut.Init(signalGenerator);
+                waveOut.Play(); // Inicia la reproducción
+
+                // Reproducir la onda durante el tiempo especificado (en milisegundos)
+                int duracionEnMilisegundos = (int)(duracion * 1000);  // Convertir la duración a milisegundos correctamente
+                System.Threading.Thread.Sleep(duracionEnMilisegundos); // Convertir a milisegundos
+
+                waveOut.Stop(); // Detener la reproducción
+            }
+        }
+        else
+        {
+            Console.WriteLine($"Nota '{nota}' no encontrada.");
+        }
+    }
+
+    public static void Main(string[] args)
+    {
+        Console.WriteLine("Ingrese la duración de la figura negra en segundos (rango: 0.1 a 5):");
+        double nuevaDuracionNegra;
+
+        while (true)
+        {
+            if (double.TryParse(Console.ReadLine(), out nuevaDuracionNegra) && nuevaDuracionNegra >= 0.1 && nuevaDuracionNegra <= 5)
+            {
+                break;
+            }
+            Console.WriteLine("Duración inválida. Por favor, ingrese un valor entre 0.1 y 5 segundos.");
+        }
+
+        AjustarFigurasMusicales(nuevaDuracionNegra);
+
+        ListaDobleEnlazada listaNotas = new ListaDobleEnlazada();
+        List<string> notasValidas = new List<string> { "Do", "Re", "Mi", "Fa", "Sol", "La", "Si" };
+
+        Console.WriteLine("Ingrese las notas y duraciones en el formato [Nota, Figura Musical], separados por comas. Ejemplo: [Do, blanca], [Re, corchea]");
+
+        string entrada = Console.ReadLine();
+
+        // Dividir la entrada en notas y duraciones
+        string[] notasYDuraciones = entrada.Split(new string[] { "], [" }, StringSplitOptions.None);
+
+        foreach (var item in notasYDuraciones)
+        {
+            string itemLimpio = item.Trim().TrimStart('[').TrimEnd(']');
+            if (itemLimpio.Contains(","))
+            {
+                string[] partes = itemLimpio.Split(',');
+
+                if (partes.Length == 2)
+                {
+                    string nota = partes[0].Trim();
+                    string figuraMusical = partes[1].Trim().ToLower(); // Convertir todo a minúsculas para comparar correctamente
+
+                    // Depuración: Imprimir la figura musical capturada
+                    Console.WriteLine($"Figura musical capturada: '{figuraMusical}'");
+
+                    // Validar que la nota esté en la lista
+                    if (!notasValidas.Contains(nota))
+                    {
+                        Console.WriteLine($"La nota '{nota}' no es válida. Solo se permiten: Do, Re, Mi, Fa, Sol, La, Si.");
+                        continue;
+                    }
+
+                    // Validar que la figura musical sea válida
+                    if (FigurasMusicales.ContainsKey(figuraMusical))
+                    {
+                        double duracion = FigurasMusicales[figuraMusical];
+                        listaNotas.Agregar(nota, duracion);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"La figura musical '{figuraMusical}' no es válida. Las opciones válidas son: Redonda, Blanca, Negra, Corchea, Semicorchea.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"El formato de '{itemLimpio}' no es correcto. Debe ser [Nota, Figura Musical].");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"El formato de '{item}' no es correcto. Debe estar entre corchetes.");
+            }
+        }
+
+        // Mostrar las notas y el tiempo total
+        List<string> notas = listaNotas.ObtenerNotas();
+        List<double> duraciones = listaNotas.ObtenerDuraciones();
+        double duracionTotal = listaNotas.ObtenerDuracionTotal();
+
+        Console.WriteLine("\nNotas ingresadas y sus duraciones:");
+        for (int i = 0; i < notas.Count; i++)
+        {
+            Console.WriteLine($"Nota: {notas[i]}, Duración: {duraciones[i]} segundos");
+        }
+        Console.WriteLine($"Tiempo total: {duracionTotal} segundos");
+
+        // Pedir al usuario que elija el orden
+        Console.WriteLine("¿Cómo quieres escuchar las notas?");
+        Console.WriteLine("1. De adelante hacia atrás");
+        Console.WriteLine("2. De atrás hacia adelante");
+        string opcion = Console.ReadLine();
+
+        // Obtener las notas y duraciones en el orden adecuado
+        List<string> notasAReproducir;
+        List<double> duracionesAReproducir;
+        if (opcion == "2")
+        {
+            // Reproducir de atrás hacia adelante
+            notasAReproducir = listaNotas.ObtenerNotasInverso();
+            duracionesAReproducir = listaNotas.ObtenerDuracionesInverso();
+        }
+        else
+        {
+            // Reproducir de adelante hacia atrás
+            notasAReproducir = listaNotas.ObtenerNotas();
+            duracionesAReproducir = listaNotas.ObtenerDuraciones();
+        }
+
+        // Reproducir las notas con sus duraciones
+        for (int i = 0; i < notasAReproducir.Count; i++)
+        {
+            ReproducirNota(notasAReproducir[i], duracionesAReproducir[i]);
+        }
+    }
+}
