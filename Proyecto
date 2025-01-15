@@ -187,54 +187,62 @@ class Program
         ListaDobleEnlazada listaNotas = new ListaDobleEnlazada();
         List<string> notasValidas = new List<string> { "Do", "Re", "Mi", "Fa", "Sol", "La", "Si" };
 
-        Console.WriteLine("Ingrese las notas y duraciones en el formato [Nota, Figura Musical], separados por comas. Ejemplo: [Do, blanca], [Re, corchea]");
-
-        string entrada = Console.ReadLine();
-
-        // Dividir la entrada en notas y duraciones
-        string[] notasYDuraciones = entrada.Split(new string[] { "], [" }, StringSplitOptions.None);
-
-        foreach (var item in notasYDuraciones)
+        bool entradaValida = false;
+        while (!entradaValida)
         {
-            string itemLimpio = item.Trim().TrimStart('[').TrimEnd(']');
-            if (itemLimpio.Contains(","))
+            Console.WriteLine("Ingrese las notas y duraciones en el formato (Nota, figura musical), separados por comas. Ejemplo: (Do, blanca), (Re, corchea)");
+            string entrada = Console.ReadLine();
+            entradaValida = true;
+            string[] notasYDuraciones = entrada.Split(new string[] { "), (" }, StringSplitOptions.None);
+
+            foreach (var item in notasYDuraciones)
             {
-                string[] partes = itemLimpio.Split(',');
-
-                if (partes.Length == 2)
+                string itemLimpio = item.Trim().TrimStart('(').TrimEnd(')');
+                if (itemLimpio.Contains(","))
                 {
-                    string nota = partes[0].Trim();
-                    string figuraMusical = partes[1].Trim().ToLower(); // Convertir todo a minúsculas para comparar correctamente
+                    string[] partes = itemLimpio.Split(',');
 
-                    // Depuración: Imprimir la figura musical capturada
-                    Console.WriteLine($"Figura musical capturada: '{figuraMusical}'");
-
-                    // Validar que la nota esté en la lista
-                    if (!notasValidas.Contains(nota))
+                    if (partes.Length == 2)
                     {
-                        Console.WriteLine($"La nota '{nota}' no es válida. Solo se permiten: Do, Re, Mi, Fa, Sol, La, Si.");
-                        continue;
-                    }
+                        string nota = partes[0].Trim();
+                        string figuraMusical = partes[1].Trim().ToLower();
 
-                    // Validar que la figura musical sea válida
-                    if (FigurasMusicales.ContainsKey(figuraMusical))
-                    {
-                        double duracion = FigurasMusicales[figuraMusical];
-                        listaNotas.Agregar(nota, duracion);
+                        if (!notasValidas.Contains(nota))
+                        {
+                            Console.WriteLine($"Nota inválida: {nota}");
+                            entradaValida = false;
+                            break;
+                        }
+
+                        if (FigurasMusicales.ContainsKey(figuraMusical))
+                        {
+                            listaNotas.Agregar(nota, FigurasMusicales[figuraMusical]);
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Figura inválida: {figuraMusical}");
+                            entradaValida = false;
+                            break;
+                        }
                     }
                     else
                     {
-                        Console.WriteLine($"La figura musical '{figuraMusical}' no es válida. Las opciones válidas son: Redonda, Blanca, Negra, Corchea, Semicorchea.");
+                        Console.WriteLine($"Formato incorrecto: {itemLimpio}");
+                        entradaValida = false;
+                        break;
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"El formato de '{itemLimpio}' no es correcto. Debe ser [Nota, Figura Musical].");
+                    Console.WriteLine($"Formato incorrecto: {item}");
+                    entradaValida = false;
+                    break;
                 }
             }
-            else
+
+            if (!entradaValida)
             {
-                Console.WriteLine($"El formato de '{item}' no es correcto. Debe estar entre corchetes.");
+                Console.WriteLine("Entrada inválida. Intente nuevamente.");
             }
         }
 
@@ -250,11 +258,24 @@ class Program
         }
         Console.WriteLine($"Tiempo total: {duracionTotal} segundos");
 
-        // Pedir al usuario que elija el orden
-        Console.WriteLine("¿Cómo quieres escuchar las notas?");
-        Console.WriteLine("1. De adelante hacia atrás");
-        Console.WriteLine("2. De atrás hacia adelante");
-        string opcion = Console.ReadLine();
+        string opcion;
+        while (true)
+        {
+            Console.WriteLine("¿Cómo quieres escuchar las notas?");
+            Console.WriteLine("1. De adelante hacia atrás");
+            Console.WriteLine("2. De atrás hacia adelante");
+            opcion = Console.ReadLine();
+
+            // Verificar si la opción es válida
+            if (opcion == "1" || opcion == "2")
+            {
+                break; // Si es válida, salir del bucle
+            }
+            else
+            {
+                Console.WriteLine("Opcion invalida. ingrese 1 o 2.");
+            }
+        }
 
         // Obtener las notas y duraciones en el orden adecuado
         List<string> notasAReproducir;
